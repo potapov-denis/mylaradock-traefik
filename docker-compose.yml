@@ -1,0 +1,60 @@
+version: '3.5'
+
+networks:
+  frontend:
+    driver: ${NETWORKS_DRIVER}
+  backend:
+    driver: ${NETWORKS_DRIVER}
+  traefik-proxy:
+    name: "traefik-proxy"
+    driver: ${NETWORKS_DRIVER}
+volumes:
+  mysql:
+    driver: ${VOLUMES_DRIVER}
+  mariadb:
+    driver: ${VOLUMES_DRIVER}
+  phpmyadmin:
+    driver: ${VOLUMES_DRIVER}
+  docker-in-docker:
+    driver: ${VOLUMES_DRIVER}
+
+services:
+
+### TRAEFIK #########################################
+    traefik:
+      build:
+        context: ./traefik
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./traefik/data:/data
+      command:
+        - "--log"
+        - "--api"
+        - "--ping=true"
+
+        - "--providers.docker"
+        - "--providers.docker.exposedbydefault=false"
+        - "--providers.docker.network=traefik-proxy"
+        - "--accesslog.filepath=/data/access.log"
+        - "--log.filePath=/data/traefik.log"
+        - "--log.level=DEBUG"
+
+        - "--entrypoints.http.address=:${TRAEFIK_HOST_HTTP_PORT}"
+        - "--entrypoints.https.address=:${TRAEFIK_HOST_HTTPS_PORT}"
+        - "--entrypoints.http.http.redirections.entrypoint.to=https"
+
+        # certificatesresolvers
+        - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+        - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+        - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http"
+
+      ports:
+        - "${TRAEFIK_HOST_HTTP_PORT}:${TRAEFIK_HOST_HTTP_PORT}"
+        - "${TRAEFIK_HOST_HTTPS_PORT}:${TRAEFIK_HOST_HTTPS_PORT}"
+      networks:
+        - traefik-proxy
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-proxy"
+        - "traefik.http.middlewares.strip-path-prefix.replacepathregex.regex=^/[a-z,0-9,-]+/(.*)"
+        - "traefik.http.middlewares.strip-path-prefix.replacepathregex.replacement=/$$1"
