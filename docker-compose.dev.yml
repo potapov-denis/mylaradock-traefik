@@ -39,7 +39,7 @@ services:
 
         - "--accesslog.filepath=/data/access.log"
         - "--log.filePath=/data/traefik.log"
-        - "--log.level=ERROR"
+        - "--log.level=DEBUG"
 
         - "--entrypoints.http.address=:${TRAEFIK_HOST_HTTP_PORT}"
         - "--entrypoints.https.address=:${TRAEFIK_HOST_HTTPS_PORT}"
